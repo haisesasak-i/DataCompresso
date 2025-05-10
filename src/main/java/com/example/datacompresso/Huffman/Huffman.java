@@ -15,7 +15,7 @@ public class Huffman {
         this.codeMap = new HashMap<>();
     }
 
-    public String encodedMessage(String message) {
+    public String encodedMessage(String message,String key) {
 
         if (message == null || message.isEmpty()) {
             System.out.println("invalid Message");
@@ -31,7 +31,13 @@ public class Huffman {
         createNodes();
         mergeNodes();
         getCodes();
-        return this.builder.toString();
+        builder.setLength(0);
+        for (char current : message.toCharArray()) {
+            builder.append(codeMap.get(current));
+        }
+        String encodedMessage = builder.toString();
+        System.out.println(encodedMessage);
+        return encodedWithKey(key,encodedMessage);
     }
 
     private void createNodes() {
@@ -78,4 +84,15 @@ public class Huffman {
         getCodesHelper(node.getRight(), builder);
         builder.deleteCharAt(builder.length() - 1); // backtrack
     }
+    private String encodedWithKey(String key, String message){
+        builder.setLength(0);
+        for(int i =0;i<message.length();i++){
+            char messageChar = message.charAt(i);
+            char keyChar = key.charAt(i%key.length());
+            char encodedChar = (char) (messageChar ^ keyChar);
+            builder.append(encodedChar);
+        }
+        return builder.toString();
+    }
+
 }
