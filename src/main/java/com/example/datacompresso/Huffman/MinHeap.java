@@ -98,4 +98,12 @@ public class MinHeap {
     public  int getSize(){
         return heap.size();
     }
+    public void displayHeap(){
+        if(heap.isEmpty()){
+            System.out.println("heap is empty");
+        }
+        for(Node node:heap){
+            System.out.println(node);
+        }
+    }
 }
