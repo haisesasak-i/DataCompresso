@@ -5,6 +5,7 @@ import java.util.ArrayList;
 public class MinHeap {
     private ArrayList<Node> heap;
 
+
     public MinHeap() {
         heap = new ArrayList<>();
     }
@@ -93,5 +94,8 @@ public class MinHeap {
         } else {
             return null;
         }
+    }
+    public  int getSize(){
+        return heap.size();
     }
 }
