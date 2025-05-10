@@ -22,5 +22,11 @@ public class Huffman {
                 frequencyMap.put(current,1);
             }
         }
+        createNodes();
+    }
+    private  void createNodes(){
+        for(char current: frequencyMap.keySet()){
+            minHeap.insert(new Node(frequencyMap.get(current),current));
+        }
     }
 }
