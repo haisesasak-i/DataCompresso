@@ -3,7 +3,8 @@ package com.example.datacompresso.Huffman;
 public class Main {
     public static void main(String[] args) {
         Huffman huffman = new Huffman();
-        System.out.println(huffman.encodedMessage("abbcccdddd","lol"));
+        String endcodedMessage = huffman.encodedMessage("Hello my name is aqib","lol");
         huffman.displayHeap();
+        System.out.println(huffman.decoder(endcodedMessage,"lol"));
     }
 }

@@ -2,10 +2,10 @@ package com.example.datacompresso.Huffman;
 
 public class Node {
     private  int frequency;
-    private  char data;
+    private  Character data;
     private  Node left;
     private  Node right;
-    public Node(int frequency, char data) {
+    public Node(int frequency, Character data) {
         this.frequency = frequency;
         this.data = data;
     }
@@ -23,11 +23,11 @@ public class Node {
         this.frequency = frequency;
     }
 
-    public char getData() {
+    public Character getData() {
         return data;
     }
 
-    public void setData(char data) {
+    public void setData(Character data) {
         this.data = data;
     }
 

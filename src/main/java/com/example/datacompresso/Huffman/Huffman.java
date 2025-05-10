@@ -37,7 +37,7 @@ public class Huffman {
         }
         String encodedMessage = builder.toString();
         System.out.println(encodedMessage);
-        return encodedWithKey(key,encodedMessage);
+        return encodeAndDecodeWithKey(key,encodedMessage);
     }
 
     private void createNodes() {
@@ -84,7 +84,7 @@ public class Huffman {
         getCodesHelper(node.getRight(), builder);
         builder.deleteCharAt(builder.length() - 1); // backtrack
     }
-    private String encodedWithKey(String key, String message){
+    private String encodeAndDecodeWithKey(String key, String message){
         builder.setLength(0);
         for(int i =0;i<message.length();i++){
             char messageChar = message.charAt(i);
@@ -92,6 +92,30 @@ public class Huffman {
             char encodedChar = (char) (messageChar ^ keyChar);
             builder.append(encodedChar);
         }
+        return builder.toString();
+    }
+    public String decoder(String message, String key) {
+        String decryptedMessage = encodeAndDecodeWithKey(key, message);
+        Node root = minHeap.peek();
+        StringBuilder builder = new StringBuilder();
+
+        for (char current : decryptedMessage.toCharArray()) {
+            if (root.getData() != null) {
+                builder.append(root.getData());
+                root = minHeap.peek();
+            }
+
+            if (current == '0') {
+                root = root.getLeft();
+            } else if (current == '1') {
+                root = root.getRight();
+            }
+        }
+
+        if (root.getData() != null) {
+            builder.append(root.getData());
+        }
+
         return builder.toString();
     }
 
