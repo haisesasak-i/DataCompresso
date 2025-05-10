@@ -4,6 +4,7 @@ import java.util.HashMap;
 
 public class Huffman {
     private HashMap<Character, Integer> frequencyMap;
+    private HashMap<Character, String> codeMap;
     private StringBuilder builder;
     private MinHeap minHeap;
 
@@ -11,6 +12,7 @@ public class Huffman {
         this.frequencyMap = new HashMap<>();
         this.minHeap = new MinHeap();
         this.builder = new StringBuilder();
+        this.codeMap = new HashMap<>();
     }
 
     public String encodedMessage(String message) {
@@ -27,6 +29,8 @@ public class Huffman {
             }
         }
         createNodes();
+        mergeNodes();
+        getCodes();
         return this.builder.toString();
     }
 
@@ -48,5 +52,30 @@ public class Huffman {
     public void displayHeap(){
         System.out.println(this.frequencyMap);
         minHeap.displayHeap();
+        System.out.println(this.codeMap);
+    }
+    private void getCodes(){
+        Node root = minHeap.peek();
+        builder.setLength(0);
+        getCodesHelper(root,builder);
+    }
+    private void getCodesHelper(Node node, StringBuilder builder) {
+        if (node == null) return;
+
+        // Leaf node: has character data
+        if (node.getLeft() == null && node.getRight() == null) {
+            codeMap.put(node.getData(), builder.toString());
+            return;
+        }
+
+        // Traverse left
+        builder.append('0');
+        getCodesHelper(node.getLeft(), builder);
+        builder.deleteCharAt(builder.length() - 1); // backtrack
+
+        // Traverse right
+        builder.append('1');
+        getCodesHelper(node.getRight(), builder);
+        builder.deleteCharAt(builder.length() - 1); // backtrack
     }
 }
