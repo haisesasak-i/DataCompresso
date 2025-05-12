@@ -23,7 +23,7 @@ public class Huffman {
             System.out.println("invalid Message");
             return null;
         }
-        message = rle.encode(message);
+        message = rle.adaptiveEncode(message);
         for (char current : message.toCharArray()) {
             if (frequencyMap.containsKey(current)) {
                 frequencyMap.replace(current, frequencyMap.get(current) + 1);

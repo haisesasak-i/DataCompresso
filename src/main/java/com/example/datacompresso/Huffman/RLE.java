@@ -5,6 +5,12 @@ public class RLE {
     public RLE(){
         this.builder = new StringBuilder();
     }
+    public String adaptiveEncode(String message) {
+        int repeats = 0;
+        for (int i = 1; i < message.length(); i++)
+            if (message.charAt(i) == message.charAt(i - 1)) repeats++;
+        return (repeats >= message.length() * 0.2) ? encode(message) : message;
+    }
     public String encode(String message) {
         builder.setLength(0);
         int count = 1;
