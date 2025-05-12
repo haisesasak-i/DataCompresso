@@ -3,11 +3,12 @@ package com.example.datacompresso.Huffman;
 import java.util.HashMap;
 
 public class Huffman {
-    RLE rle;
+   private RLE rle;
     private HashMap<Character, Integer> frequencyMap;
     private HashMap<Character, String> codeMap;
     private StringBuilder builder;
     private MinHeap minHeap;
+    private StateForAdaptiveEncoding state;
 
     public Huffman() {
         rle = new RLE();
@@ -15,6 +16,7 @@ public class Huffman {
         this.minHeap = new MinHeap();
         this.builder = new StringBuilder();
         this.codeMap = new HashMap<>();
+        state = new StateForAdaptiveEncoding();
     }
 
     public String encodedMessage(String message,String key) {
@@ -23,7 +25,11 @@ public class Huffman {
             System.out.println("invalid Message");
             return null;
         }
+        String oldMessage = message;
         message = rle.adaptiveEncode(message);
+        if(message.equals(oldMessage)){
+            state.setState(true);
+        }
         for (char current : message.toCharArray()) {
             if (frequencyMap.containsKey(current)) {
                 frequencyMap.replace(current, frequencyMap.get(current) + 1);
@@ -118,8 +124,10 @@ public class Huffman {
         if (root.getData() != null) {
             builder.append(root.getData());
         }
-
-        return rle.decode(builder.toString());
+        if(state.isState())
+            return rle.decode(builder.toString());
+        else
+            return builder.toString();
     }
 
 }
