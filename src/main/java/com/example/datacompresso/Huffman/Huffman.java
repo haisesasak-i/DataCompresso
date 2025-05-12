@@ -28,7 +28,7 @@ public class Huffman {
         String oldMessage = message;
         message = rle.adaptiveEncode(message);
         if(message.equals(oldMessage)){
-            state.setState(true);
+            state.setState(false);
         }
         for (char current : message.toCharArray()) {
             if (frequencyMap.containsKey(current)) {
