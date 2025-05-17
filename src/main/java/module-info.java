@@ -5,4 +5,5 @@ module com.example.datacompresso {
 
     opens com.example.datacompresso to javafx.fxml;
     exports com.example.datacompresso;
+    exports com.example.datacompresso.ui;
 }
