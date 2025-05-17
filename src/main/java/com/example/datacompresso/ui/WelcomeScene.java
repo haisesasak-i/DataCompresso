@@ -59,6 +59,7 @@ public class WelcomeScene extends Application {
         Button infoButton = createGradientButton("Info",
                 "#006666", "#004d4d", "#008080");
 
+
         // Button container
         HBox buttons = new HBox(30, startButton, infoButton);
         buttons.setAlignment(Pos.CENTER);
@@ -79,8 +80,14 @@ public class WelcomeScene extends Application {
                 0, 0, 0.5, 0.5, 0.7, true, CycleMethod.NO_CYCLE, stops);
         root.setBackground(new Background(new BackgroundFill(backgroundGradient, CornerRadii.EMPTY, Insets.EMPTY)));
 
-        Scene scene = new Scene(root);
-        primaryStage.setScene(scene);
+        Scene welcomeScene = new Scene(root);
+        primaryStage.setScene(welcomeScene);
+        infoButton.setOnAction(e -> {
+            Scene infoScene = InfoScene.create(primaryStage, () -> {
+                primaryStage.setScene(welcomeScene);
+            });
+            primaryStage.setScene(infoScene);
+        });
         primaryStage.setTitle("Data Compresso - Welcome");
         primaryStage.show();
     }
