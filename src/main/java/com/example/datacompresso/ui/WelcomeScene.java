@@ -19,6 +19,8 @@ public class WelcomeScene extends Application {
 
     @Override
     public void start(Stage primaryStage) {
+        primaryStage.setHeight(900);
+        primaryStage.setWidth(900);
         // App Title with neon glow and pulse animation
         Label titleLabel = new Label("Data Compresso");
         titleLabel.setFont(Font.font("Orbitron", FontWeight.BOLD, 60));
@@ -87,6 +89,15 @@ public class WelcomeScene extends Application {
                 primaryStage.setScene(welcomeScene);
             });
             primaryStage.setScene(infoScene);
+        });
+        startButton.setOnAction(e -> {
+            Scene algorithmSelectionScene = AlgorithmSelectionScene.create(
+                    primaryStage,
+                    () -> primaryStage.setScene(welcomeScene), // Temporary: go back on Huffman click
+                    () -> primaryStage.setScene(welcomeScene), // Temporary: go back on LZW click
+                    () -> primaryStage.setScene(welcomeScene)  // Back button
+            );
+            primaryStage.setScene(algorithmSelectionScene);
         });
         primaryStage.setTitle("Data Compresso - Welcome");
         primaryStage.show();
