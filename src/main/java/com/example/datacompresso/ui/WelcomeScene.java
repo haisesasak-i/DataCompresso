@@ -93,14 +93,30 @@ public class WelcomeScene extends Application {
         startButton.setOnAction(e -> {
             Scene algorithmSelectionScene = AlgorithmSelectionScene.create(
                     primaryStage,
-                    () -> primaryStage.setScene(welcomeScene), // Temporary: go back on Huffman click
-                    () -> primaryStage.setScene(welcomeScene), // Temporary: go back on LZW click
-                    () -> primaryStage.setScene(welcomeScene)  // Back button
+                    () -> {
+                        Scene huffmanScene = HuffmanScene.create(primaryStage, () -> {
+                            Scene algorithmSelectionSceneAgain = AlgorithmSelectionScene.create(
+                                    primaryStage,
+                                    () -> primaryStage.setScene(HuffmanScene.create(primaryStage, () -> {})),
+                                    () -> System.out.println("LZW selected"),
+                                    () -> primaryStage.setScene(welcomeScene)
+                            );
+                            primaryStage.setScene(algorithmSelectionSceneAgain);
+                        });
+                        primaryStage.setScene(huffmanScene);
+                    },
+                    () -> {
+                        System.out.println("LZW selected");
+                    },
+                    () -> {
+                        primaryStage.setScene(welcomeScene);
+                    }
             );
             primaryStage.setScene(algorithmSelectionScene);
         });
         primaryStage.setTitle("Data Compresso - Welcome");
         primaryStage.show();
+
     }
 
     private Button createGradientButton(String text, String baseColor, String darkColor, String hoverColor) {

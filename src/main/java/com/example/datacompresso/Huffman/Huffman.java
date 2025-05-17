@@ -1,6 +1,7 @@
 package com.example.datacompresso.Huffman;
 
 import java.util.HashMap;
+import java.util.Base64;
 
 public class Huffman {
    private RLE rle;

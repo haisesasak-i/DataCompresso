@@ -34,7 +34,7 @@ public class AlgorithmSelectionScene {
         pulse.setCycleCount(Animation.INDEFINITE);
         pulse.play();
 
-        // Buttons with same gradient style and hover animation from welcome scene
+        // Buttons with gradient style
         Button huffmanBtn = createGradientButton("Huffman Compression",
                 "#00ffd5", "#00b29e", "#00ffc2");
         huffmanBtn.setOnAction(e -> onSelectHuffman.run());
@@ -57,13 +57,13 @@ public class AlgorithmSelectionScene {
         return new Scene(root, 720, 480);
     }
 
-    private static Button createGradientButton(String text, String baseColor, String darkColor, String hoverColor) {
+    static Button createGradientButton(String text, String baseColor, String darkColor, String hoverColor) {
         Button btn = new Button(text);
         btn.setFont(Font.font("Montserrat", FontWeight.BOLD, 18));
         btn.setTextFill(Color.WHITE);
         btn.setPrefWidth(250);
         btn.setPrefHeight(50);
-        btn.setStyle("-fx-background-radius: 25; -fx-cursor: hand;");
+
         setButtonGradient(btn, baseColor, darkColor);
 
         btn.setOnMouseEntered(e -> {
@@ -84,9 +84,11 @@ public class AlgorithmSelectionScene {
     }
 
     private static void setButtonGradient(Button btn, String topColor, String bottomColor) {
-        btn.setStyle("-fx-background-radius: 25;" +
-                "-fx-background-insets: 0;" +
-                "-fx-background-color: linear-gradient(to bottom, " + topColor + ", " + bottomColor + ");" +
-                "-fx-cursor: hand;");
+        btn.setStyle(
+                "-fx-background-radius: 25;" +
+                        "-fx-background-insets: 0;" +
+                        "-fx-background-color: linear-gradient(to bottom, " + topColor + ", " + bottomColor + ");" +
+                        "-fx-cursor: hand;"
+        );
     }
 }
