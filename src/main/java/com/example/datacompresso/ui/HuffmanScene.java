@@ -22,6 +22,9 @@ public class HuffmanScene {
     private static com.example.datacompresso.Huffman.Huffman sharedHuffman;
 
     public static Scene create(Stage stage, Runnable onBack) {
+        if (sharedHuffman == null) {
+            sharedHuffman = new com.example.datacompresso.Huffman.Huffman();
+        }
         Label titleLabel = new Label("Huffman Compression");
         titleLabel.setFont(Font.font("Orbitron", FontWeight.BOLD, 40));
         titleLabel.setTextFill(Color.web("#00fff7"));
@@ -245,8 +248,12 @@ public class HuffmanScene {
             }
 
             if (sharedHuffman == null) {
-                showAlert(Alert.AlertType.ERROR, "Decompression Error", "No compressed message available in session.");
-                return;
+                // Try to load saved Huffman state if null
+                sharedHuffman = new com.example.datacompresso.Huffman.Huffman();
+                if (sharedHuffman == null) {
+                    showAlert(Alert.AlertType.ERROR, "Decompression Error", "No compressed message available in session.");
+                    return;
+                }
             }
 
             if (selectedFile[0] == null) {

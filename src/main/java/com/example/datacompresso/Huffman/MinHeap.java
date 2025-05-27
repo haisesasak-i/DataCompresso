@@ -1,8 +1,10 @@
 package com.example.datacompresso.Huffman;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 
-public class MinHeap {
+public class MinHeap implements Serializable {
+    private static final long serialVersionUID = 1L;
     private ArrayList<Node> heap;
 
 
@@ -105,5 +107,14 @@ public class MinHeap {
         for(Node node:heap){
             System.out.println(node);
         }
+    }
+    public void clear(){
+        heap.clear();
+    }
+    @Override
+    public String toString() {
+        return "MinHeap{" +
+                "heap=" + heap +
+                '}';
     }
 }

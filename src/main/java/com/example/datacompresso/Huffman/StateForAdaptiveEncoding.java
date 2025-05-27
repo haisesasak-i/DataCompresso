@@ -1,6 +1,9 @@
 package com.example.datacompresso.Huffman;
 
-public class StateForAdaptiveEncoding {
+import java.io.Serializable;
+
+public class StateForAdaptiveEncoding  implements Serializable {
+    private static final long serialVersionUID = 1L;
     private boolean state;
 
     public boolean isState() {

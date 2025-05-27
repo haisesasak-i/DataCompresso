@@ -1,12 +1,15 @@
 package com.example.datacompresso.Huffman;
 
-import java.nio.charset.StandardCharsets;
+import java.io.*;
 import java.util.HashMap;
-import java.util.Base64;
 import java.util.Random;
 
-public class Huffman {
-   private RLE rle;
+public class Huffman implements Serializable {
+    private static final long serialVersionUID = 1L;
+
+    private static final String SERIAL_FILE = "huffman_state.ser";
+
+    private RLE rle;
     private HashMap<Character, Integer> frequencyMap;
     private HashMap<Character, String> codeMap;
     private StringBuilder builder;
@@ -14,42 +17,88 @@ public class Huffman {
     private StateForAdaptiveEncoding state;
 
     public Huffman() {
-        rle = new RLE();
-        this.frequencyMap = new HashMap<>();
-        this.minHeap = new MinHeap();
-        this.builder = new StringBuilder();
-        this.codeMap = new HashMap<>();
-        state = new StateForAdaptiveEncoding();
+        // Try loading previous state
+        if (!loadState()) {
+            // If no saved state, initialize new
+            rle = new RLE();
+            this.frequencyMap = new HashMap<>();
+            this.minHeap = new MinHeap();
+            this.builder = new StringBuilder();
+            this.codeMap = new HashMap<>();
+            state = new StateForAdaptiveEncoding();
+        }
     }
 
-    public String encodedMessage(String message,String key) {
+    // Serialize current state to file
+    public void saveState() {
+        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(SERIAL_FILE))) {
+            oos.writeObject(this);
+            System.out.println("Huffman state saved.");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
+    // Load Huffman state from file
+    private boolean loadState() {
+        File file = new File(SERIAL_FILE);
+        if (!file.exists()) return false;
+
+        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(file))) {
+            Huffman loaded = (Huffman) ois.readObject();
+
+            // Copy loaded fields into this
+            this.rle = loaded.rle;
+            this.frequencyMap = loaded.frequencyMap;
+            this.codeMap = loaded.codeMap;
+            this.builder = new StringBuilder();
+            this.minHeap = loaded.minHeap;
+            this.state = loaded.state;
+
+            System.out.println("Loaded Huffman state from file.");
+            return true;
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+            System.out.println("Error loading Huffman state from file.");
+            return false;
+        }
+    }
+
+    public String encodedMessage(String message, String key) {
         if (message == null || message.isEmpty()) {
             System.out.println("invalid Message");
             return null;
         }
+
+        // Clear previous state before encoding new message
+        frequencyMap.clear();
+        codeMap.clear();
+        minHeap.clear();  // You should implement clear() in MinHeap
+
         String oldMessage = message;
         message = rle.adaptiveEncode(message);
-        if(message.equals(oldMessage)){
+        if (message.equals(oldMessage)) {
             state.setState(false);
         }
+
         for (char current : message.toCharArray()) {
-            if (frequencyMap.containsKey(current)) {
-                frequencyMap.replace(current, frequencyMap.get(current) + 1);
-            } else {
-                frequencyMap.put(current, 1);
-            }
+            frequencyMap.put(current, frequencyMap.getOrDefault(current, 0) + 1);
         }
+
         createNodes();
         mergeNodes();
         getCodes();
+
         builder.setLength(0);
         for (char current : message.toCharArray()) {
             builder.append(codeMap.get(current));
         }
         String encodedMessage = builder.toString();
 
-        return encodeAndDecodeWithKey(key,encodedMessage);
+        // Save the current state to file after encoding
+        saveState();
+
+        return encodeAndDecodeWithKey(key, encodedMessage);
     }
 
     private void createNodes() {

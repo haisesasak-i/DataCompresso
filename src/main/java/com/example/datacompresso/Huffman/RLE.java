@@ -1,6 +1,10 @@
 package com.example.datacompresso.Huffman;
 
-public class RLE {
+import java.io.Serial;
+import java.io.Serializable;
+
+public class RLE  implements Serializable {
+    private static final long serialVersionUID = 1L;
     private StringBuilder builder;
     public RLE(){
         this.builder = new StringBuilder();
