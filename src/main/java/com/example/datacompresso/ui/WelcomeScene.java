@@ -93,22 +93,31 @@ public class WelcomeScene extends Application {
         startButton.setOnAction(e -> {
             Scene algorithmSelectionScene = AlgorithmSelectionScene.create(
                     primaryStage,
-                    () -> {
+                    () -> {  // Huffman selected
                         Scene huffmanScene = HuffmanScene.create(primaryStage, () -> {
                             Scene algorithmSelectionSceneAgain = AlgorithmSelectionScene.create(
                                     primaryStage,
                                     () -> primaryStage.setScene(HuffmanScene.create(primaryStage, () -> {})),
-                                    () -> System.out.println("LZW selected"),
+                                    () -> primaryStage.setScene(LZWScene.create(primaryStage, () -> {})),
                                     () -> primaryStage.setScene(welcomeScene)
                             );
                             primaryStage.setScene(algorithmSelectionSceneAgain);
                         });
                         primaryStage.setScene(huffmanScene);
                     },
-                    () -> {
-                        System.out.println("LZW selected");
+                    () -> {  // LZW selected
+                        Scene lzwScene = LZWScene.create(primaryStage, () -> {
+                            Scene algorithmSelectionSceneAgain = AlgorithmSelectionScene.create(
+                                    primaryStage,
+                                    () -> primaryStage.setScene(HuffmanScene.create(primaryStage, () -> {})),
+                                    () -> primaryStage.setScene(LZWScene.create(primaryStage, () -> {})),
+                                    () -> primaryStage.setScene(welcomeScene)
+                            );
+                            primaryStage.setScene(algorithmSelectionSceneAgain);
+                        });
+                        primaryStage.setScene(lzwScene);
                     },
-                    () -> {
+                    () -> {  // Back to Welcome
                         primaryStage.setScene(welcomeScene);
                     }
             );
