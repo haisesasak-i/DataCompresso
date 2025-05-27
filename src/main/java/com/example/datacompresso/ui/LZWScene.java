@@ -21,6 +21,7 @@ import java.io.*;
 public class LZWScene {
 
     private static MyList sharedCodeList;
+    private static LZWAlgorithm lzwInstance; // shared instance between compress/decompress
 
     public static Scene create(Stage stage, Runnable onBack) {
         Label titleLabel = new Label("LZW Compression");
@@ -135,9 +136,9 @@ public class LZWScene {
                 try {
                     byte[] inputBytes = message.getBytes("UTF-8");
                     sharedCodeList = new MyList();
-                    byte[] compressedBytes = LZWAlgorithm.compress(inputBytes, sharedCodeList);
+                    lzwInstance = new LZWAlgorithm(); // Create and save instance
+                    byte[] compressedBytes = lzwInstance.compress(inputBytes, sharedCodeList);
 
-                    // Convert compressed bytes to hex string for display
                     StringBuilder sb = new StringBuilder();
                     for (byte b : compressedBytes) {
                         sb.append(String.format("%02X ", b));
@@ -161,17 +162,11 @@ public class LZWScene {
             File outFile = fc.showSaveDialog(stage);
             if (outFile != null) {
                 try (FileOutputStream fos = new FileOutputStream(outFile)) {
-                    // Save raw compressed bytes
-                    byte[] compressedBytes = new byte[sharedCodeList.size() * 12 / 8 + 1]; // rough size
-                    // We need to reconstruct bytes same as compress returns, so better to save last compressed bytes from the resultArea hex string:
-                    // Let's decode hex string displayed back to bytes:
-
                     String[] hexBytes = resultArea.getText().split(" ");
                     byte[] bytesToWrite = new byte[hexBytes.length];
                     for (int i = 0; i < hexBytes.length; i++) {
                         bytesToWrite[i] = (byte) Integer.parseInt(hexBytes[i], 16);
                     }
-
                     fos.write(bytesToWrite);
                 } catch (IOException ex) {
                     ex.printStackTrace();
@@ -181,12 +176,7 @@ public class LZWScene {
 
         backBtn.setOnAction(e -> stage.setScene(create(stage, () -> {})));
 
-        VBox layout = new VBox(12,
-                messageLabel, messageArea, fileBtn,
-                compressBtn, progressBox,
-                resultArea, saveBtn, backBtn
-        );
-
+        VBox layout = new VBox(12, messageLabel, messageArea, fileBtn, compressBtn, progressBox, resultArea, saveBtn, backBtn);
         layout.setAlignment(Pos.CENTER);
         layout.setPadding(new Insets(30));
         layout.setStyle("-fx-background-color: radial-gradient(center 50% 50%, radius 70%, #001F26 0%, #000000 100%);");
@@ -234,13 +224,10 @@ public class LZWScene {
             new Thread(() -> {
                 try {
                     byte[] compressedBytes = java.nio.file.Files.readAllBytes(selectedFile[0].toPath());
-
-                    // For decompression, we need to know codeCount — how many 12-bit codes are there?
-                    // total bits = compressedBytes.length * 8
-                    // codeCount = totalBits / 12
                     int codeCount = (compressedBytes.length * 8) / 12;
 
-                    byte[] decompressedBytes = LZWAlgorithm.decompress(compressedBytes, codeCount);
+                    if (lzwInstance == null) lzwInstance = new LZWAlgorithm();
+                    byte[] decompressedBytes = lzwInstance.decompress(compressedBytes, codeCount);
                     String output = new String(decompressedBytes, "UTF-8");
 
                     javafx.application.Platform.runLater(() -> {
