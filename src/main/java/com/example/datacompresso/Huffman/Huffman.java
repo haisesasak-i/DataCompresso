@@ -1,7 +1,9 @@
 package com.example.datacompresso.Huffman;
 
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Base64;
+import java.util.Random;
 
 public class Huffman {
    private RLE rle;
@@ -94,16 +96,21 @@ public class Huffman {
         getCodesHelper(node.getRight(), builder);
         builder.deleteCharAt(builder.length() - 1); // backtrack
     }
-    private String encodeAndDecodeWithKey(String key, String message){
-        builder.setLength(0);
-        for(int i =0;i<message.length();i++){
-            char messageChar = message.charAt(i);
-            char keyChar = key.charAt(i%key.length());
-            char encodedChar = (char) (messageChar ^ keyChar);
-            builder.append(encodedChar);
+    private String encodeAndDecodeWithKey(String key, String message) {
+        StringBuilder result = new StringBuilder(message.length());
+        Random prng = new Random(key.hashCode());  // seed with key's hashcode
+
+        for (int i = 0; i < message.length(); i++) {
+            char bit = message.charAt(i);
+            int keyBit = prng.nextBoolean() ? 1 : 0;
+            char xorBit = (char)((bit - '0') ^ keyBit + '0');  // xor and convert back to '0' or '1'
+            result.append(xorBit);
         }
-        return builder.toString();
+
+        return result.toString();
+
     }
+
     public String decoder(String message, String key) {
         String decryptedMessage = encodeAndDecodeWithKey(key, message);
         Node root = minHeap.peek();

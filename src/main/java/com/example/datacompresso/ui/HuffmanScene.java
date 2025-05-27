@@ -19,6 +19,8 @@ import java.io.*;
 
 public class HuffmanScene {
 
+    private static com.example.datacompresso.Huffman.Huffman sharedHuffman;
+
     public static Scene create(Stage stage, Runnable onBack) {
         Label titleLabel = new Label("Huffman Compression");
         titleLabel.setFont(Font.font("Orbitron", FontWeight.BOLD, 40));
@@ -50,6 +52,7 @@ public class HuffmanScene {
 
         return new Scene(root, 720, 480);
     }
+
     private static void showCompressUI(Stage stage) {
         Label messageLabel = new Label("Enter Message or Choose File:");
         messageLabel.setTextFill(Color.web("#00ffc8"));
@@ -141,8 +144,8 @@ public class HuffmanScene {
 
             timeline.setOnFinished(ev -> {
                 try {
-                    com.example.datacompresso.Huffman.Huffman huffman = new com.example.datacompresso.Huffman.Huffman();
-                    String output = huffman.encodedMessage(message, key);
+                    sharedHuffman = new com.example.datacompresso.Huffman.Huffman();
+                    String output = sharedHuffman.encodedMessage(message, key);
                     resultArea.setText(output);
                     resultArea.setVisible(true);
                     saveBtn.setVisible(true);
@@ -160,8 +163,14 @@ public class HuffmanScene {
             FileChooser fc = new FileChooser();
             File outFile = fc.showSaveDialog(stage);
             if (outFile != null) {
-                try (BufferedWriter writer = new BufferedWriter(new FileWriter(outFile))) {
-                    writer.write(resultArea.getText());
+                try (FileOutputStream fos = new FileOutputStream(outFile)) {
+                    String bitString = resultArea.getText();
+
+                    // Convert bit string to byte array (bit-packed)
+                    byte[] bytes = toByteArray(bitString);
+
+                    // Write bytes to file (binary)
+                    fos.write(bytes);
                 } catch (IOException ex) {
                     ex.printStackTrace();
                 }
@@ -192,59 +201,92 @@ public class HuffmanScene {
         alert.setContentText(message);
         alert.showAndWait();
     }
+
     private static void showDecompressUI(Stage stage) {
         Label label = new Label("Select File to Decompress:");
+        label.setTextFill(Color.web("#00ffc8"));
+
         Button fileBtn = new Button("Select File");
+        fileBtn.setStyle("-fx-background-color: #004d4d; -fx-text-fill: white; -fx-font-weight: bold;");
+
         Label keyLabel = new Label("Enter Key:");
+        keyLabel.setTextFill(Color.web("#00ffc8"));
+
         TextField keyField = new TextField();
-        setBlackBackgroundAndTextColor(keyField);
+        keyField.setPromptText("Decryption key...");
+        keyField.setStyle("-fx-control-inner-background: #111111; -fx-text-fill: #00ffc8; -fx-font-family: 'Consolas'; -fx-border-color: #00ffd5;");
 
         ProgressBar progressBar = new ProgressBar();
         progressBar.setVisible(false);
+        progressBar.setPrefWidth(300);
+
         Button decompressBtn = new Button("Decompress");
+        decompressBtn.setDisable(true);
+        decompressBtn.setStyle("-fx-background-color: linear-gradient(to right, #00b3b3, #006666); -fx-text-fill: white; -fx-font-weight: bold;");
+
         Button backBtn = AlgorithmSelectionScene.createGradientButton("Back", "#006666", "#004d4d", "#008080");
+
+        final File[] selectedFile = new File[1];
 
         fileBtn.setOnAction(e -> {
             FileChooser fc = new FileChooser();
             File file = fc.showOpenDialog(stage);
             if (file != null) {
+                selectedFile[0] = file;
                 decompressBtn.setDisable(false);
-                decompressBtn.setOnAction(ev -> {
-                    String key = keyField.getText();
-                    if (key.isEmpty()) return;
-                    progressBar.setVisible(true);
-
-                    new Thread(() -> {
-                        try {
-                            String content = new String(java.nio.file.Files.readAllBytes(file.toPath()));
-                            com.example.datacompresso.Huffman.Huffman huffman = new com.example.datacompresso.Huffman.Huffman();
-                            String output = huffman.decoder(content, key);
-
-                            javafx.application.Platform.runLater(() -> {
-                                progressBar.setVisible(false);
-                                FileChooser saveChooser = new FileChooser();
-                                File saveFile = saveChooser.showSaveDialog(stage);
-                                if (saveFile != null) {
-                                    try (BufferedWriter writer = new BufferedWriter(new FileWriter(saveFile))) {
-                                        writer.write(output);
-                                    } catch (IOException ex) {
-                                        ex.printStackTrace();
-                                    }
-                                }
-                            });
-                        } catch (Exception ex) {
-                            ex.printStackTrace();
-                        }
-                    }).start();
-                });
             }
         });
 
-        decompressBtn.setDisable(true);
+        decompressBtn.setOnAction(ev -> {
+            String key = keyField.getText().trim();
+            if (key.isEmpty()) {
+                showAlert(Alert.AlertType.WARNING, "Missing Key", "Please enter the decryption key.");
+                return;
+            }
+
+            if (sharedHuffman == null) {
+                showAlert(Alert.AlertType.ERROR, "Decompression Error", "No compressed message available in session.");
+                return;
+            }
+
+            if (selectedFile[0] == null) {
+                showAlert(Alert.AlertType.WARNING, "No File Selected", "Please select a file to decompress.");
+                return;
+            }
+
+            progressBar.setVisible(true);
+
+            new Thread(() -> {
+                try {
+                    byte[] bytes = java.nio.file.Files.readAllBytes(selectedFile[0].toPath());
+                    String bitString = toBitString(bytes);
+                    String output = sharedHuffman.decoder(bitString, key);
+
+                    javafx.application.Platform.runLater(() -> {
+                        progressBar.setVisible(false);
+                        FileChooser saveChooser = new FileChooser();
+                        File saveFile = saveChooser.showSaveDialog(stage);
+                        if (saveFile != null) {
+                            try (BufferedWriter writer = new BufferedWriter(new FileWriter(saveFile))) {
+                                writer.write(output);
+                            } catch (IOException ex) {
+                                ex.printStackTrace();
+                            }
+                        }
+                    });
+
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                    javafx.application.Platform.runLater(() ->
+                            showAlert(Alert.AlertType.ERROR, "Decompression Failed", "Could not decompress the file.")
+                    );
+                }
+            }).start();
+        });
 
         backBtn.setOnAction(e -> stage.setScene(create(stage, () -> {})));
 
-        VBox layout = new VBox(10, label, fileBtn, keyLabel, keyField, decompressBtn, progressBar, backBtn);
+        VBox layout = new VBox(15, label, fileBtn, keyLabel, keyField, decompressBtn, progressBar, backBtn);
         layout.setAlignment(Pos.CENTER);
         layout.setPadding(new Insets(30));
         layout.setStyle("-fx-background-color: radial-gradient(center 50% 50%, radius 70%, #001F26 0%, #000000 100%);");
@@ -253,13 +295,32 @@ public class HuffmanScene {
         stage.setScene(decompressScene);
     }
 
-    private static void setBlackBackgroundAndTextColor(Control control) {
-        control.setStyle(
-                "-fx-control-inner-background: black;" +
-                        "-fx-background-color: black;" +
-                        "-fx-text-fill: #00ffc2;" +  // cyan/teal text color to match theme
-                        "-fx-highlight-fill: #00b29e;" + // selection background
-                        "-fx-highlight-text-fill: black;"
-        );
+    private static byte[] toByteArray(String bitString) {
+        int byteCount = (bitString.length() + 7) / 8;
+        byte[] bytes = new byte[byteCount];
+        int byteIndex = 0;
+        int bitIndex = 0;
+
+        for (int i = 0; i < bitString.length(); i++) {
+            if (bitString.charAt(i) == '1') {
+                bytes[byteIndex] |= (1 << (7 - bitIndex));
+            }
+            bitIndex++;
+            if (bitIndex == 8) {
+                bitIndex = 0;
+                byteIndex++;
+            }
+        }
+        return bytes;
+    }
+
+    private static String toBitString(byte[] bytes) {
+        StringBuilder bitString = new StringBuilder();
+        for (byte b : bytes) {
+            for (int i = 7; i >= 0; i--) {
+                bitString.append((b >> i) & 1);
+            }
+        }
+        return bitString.toString();
     }
 }
