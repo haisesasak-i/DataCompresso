@@ -1,14 +1,20 @@
-// MyMap.java
-
 package com.example.datacompresso.LZW;
-// MyList.java
 
+import java.io.*;
 
-// LZWAlgorithm.java
-import java.io.ByteArrayOutputStream;
+public class LZWAlgorithm implements Serializable {
+    private static final long serialVersionUID = 1L;
+    private static final String SERIAL_FILE = "lzw_state.ser";
 
-public class LZWAlgorithm {
-    public static byte[] compress(byte[] input, MyList codeList) {
+    private byte[] compressedData;
+    private int codeCount;
+
+    public LZWAlgorithm() {
+        // try to load previous state
+        loadState();
+    }
+
+    public byte[] compress(byte[] input, MyList codeList) {
         int dictSize = 256;
         MyMap dictionary = new MyMap();
         for (int i = 0; i < 256; i++) {
@@ -49,10 +55,13 @@ public class LZWAlgorithm {
             }
         }
 
+        this.compressedData = output;
+        this.codeCount = codeList.size();
+        saveState();  // Save after compressing
         return output;
     }
 
-    public static byte[] decompress(byte[] compressed, int codeCount) {
+    public byte[] decompress(byte[] compressed, int codeCount) {
         int dictSize = 256;
         String[] dictionary = new String[4096];
         for (int i = 0; i < 256; i++) {
@@ -100,5 +109,41 @@ public class LZWAlgorithm {
 
         return out.toByteArray();
     }
-}
 
+    // Save the state (compressedData + codeCount)
+    public void saveState() {
+        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(SERIAL_FILE))) {
+            oos.writeObject(this);
+            System.out.println("LZW state saved.");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // Load previous state
+    public boolean loadState() {
+        File file = new File(SERIAL_FILE);
+        if (!file.exists()) return false;
+
+        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(file))) {
+            LZWAlgorithm loaded = (LZWAlgorithm) ois.readObject();
+            this.compressedData = loaded.compressedData;
+            this.codeCount = loaded.codeCount;
+            System.out.println("LZW state loaded.");
+            return true;
+        } catch (IOException | ClassNotFoundException e) {
+            System.out.println("Error loading LZW state.");
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    // Accessors if needed
+    public byte[] getCompressedData() {
+        return compressedData;
+    }
+
+    public int getCodeCount() {
+        return codeCount;
+    }
+}
