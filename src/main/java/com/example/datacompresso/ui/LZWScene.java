@@ -22,8 +22,9 @@ public class LZWScene {
 
     private static MyList sharedCodeList;
     private static LZWAlgorithm lzwInstance; // shared instance between compress/decompress
-
+    private static Runnable run ;
     public static Scene create(Stage stage, Runnable onBack) {
+        run = onBack;
         Label titleLabel = new Label("LZW Compression");
         titleLabel.setFont(Font.font("Orbitron", FontWeight.BOLD, 40));
         titleLabel.setTextFill(Color.web("#00fff7"));
@@ -174,7 +175,7 @@ public class LZWScene {
             }
         });
 
-        backBtn.setOnAction(e -> stage.setScene(create(stage, () -> {})));
+        backBtn.setOnAction(e -> stage.setScene(create(stage, run)));
 
         VBox layout = new VBox(12, messageLabel, messageArea, fileBtn, compressBtn, progressBox, resultArea, saveBtn, backBtn);
         layout.setAlignment(Pos.CENTER);
@@ -252,7 +253,7 @@ public class LZWScene {
             }).start();
         });
 
-        backBtn.setOnAction(e -> stage.setScene(create(stage, () -> {})));
+        backBtn.setOnAction(e -> stage.setScene(create(stage, run)));
 
         VBox layout = new VBox(15, label, fileBtn, decompressBtn, progressBar, backBtn);
         layout.setAlignment(Pos.CENTER);

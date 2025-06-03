@@ -20,8 +20,10 @@ import java.io.*;
 public class HuffmanScene {
 
     private static com.example.datacompresso.Huffman.Huffman sharedHuffman;
-
+    private static Runnable run ;
     public static Scene create(Stage stage, Runnable onBack) {
+        run = onBack;
+
         if (sharedHuffman == null) {
             sharedHuffman = new com.example.datacompresso.Huffman.Huffman();
         }
@@ -46,7 +48,7 @@ public class HuffmanScene {
 
         compressBtn.setOnAction(e -> showCompressUI(stage));
         decompressBtn.setOnAction(e -> showDecompressUI(stage));
-        backBtn.setOnAction(e -> onBack.run());
+        backBtn.setOnAction(e -> run.run());
 
         VBox root = new VBox(30, titleLabel, compressBtn, decompressBtn, backBtn);
         root.setAlignment(Pos.CENTER);
@@ -57,6 +59,7 @@ public class HuffmanScene {
     }
 
     private static void showCompressUI(Stage stage) {
+
         Label messageLabel = new Label("Enter Message or Choose File:");
         messageLabel.setTextFill(Color.web("#00ffc8"));
 
@@ -180,7 +183,7 @@ public class HuffmanScene {
             }
         });
 
-        backBtn.setOnAction(e -> stage.setScene(HuffmanScene.create(stage, () -> {})));
+        backBtn.setOnAction(e -> stage.setScene(HuffmanScene.create(stage, run)));
 
         VBox layout = new VBox(12,
                 messageLabel, messageArea, fileBtn,
@@ -291,7 +294,7 @@ public class HuffmanScene {
             }).start();
         });
 
-        backBtn.setOnAction(e -> stage.setScene(create(stage, () -> {})));
+        backBtn.setOnAction(e -> stage.setScene(HuffmanScene.create(stage, run)));
 
         VBox layout = new VBox(15, label, fileBtn, keyLabel, keyField, decompressBtn, progressBar, backBtn);
         layout.setAlignment(Pos.CENTER);
