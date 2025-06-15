@@ -87,15 +87,15 @@ public class WelcomeScene extends Application {
         explanationLabel.setStyle("-fx-text-alignment: center;");
 
         // Slide up animation for explanation
-        TranslateTransition explanationSlide = new TranslateTransition(Duration.seconds(1.5), explanationLabel);
+        TranslateTransition explanationSlide = new TranslateTransition(Duration.seconds(0.5), explanationLabel);
         explanationSlide.setFromY(30);
         explanationSlide.setToY(0);
-        explanationSlide.setDelay(Duration.seconds(1));
+        explanationSlide.setDelay(Duration.seconds(0.5));
 
-        FadeTransition explanationFade = new FadeTransition(Duration.seconds(1.5), explanationLabel);
+        FadeTransition explanationFade = new FadeTransition(Duration.seconds(0.5), explanationLabel);
         explanationFade.setFromValue(0);
         explanationFade.setToValue(1);
-        explanationFade.setDelay(Duration.seconds(1));
+        explanationFade.setDelay(Duration.seconds(0.5));
 
         ParallelTransition explanationAnimation = new ParallelTransition(explanationSlide, explanationFade);
         explanationAnimation.play();
@@ -116,8 +116,8 @@ public class WelcomeScene extends Application {
         buttons.setPadding(new Insets(35, 0, 0, 0));
 
         // Staggered button animations
-        createButtonAnimation(startButton, 1.8);
-        createButtonAnimation(infoButton, 2.1);
+        createButtonAnimation(startButton, 0.3);
+        createButtonAnimation(infoButton, 0.3);
 
         // Content container with glass effect
         VBox contentBox = new VBox(22, titleLabel, taglineLabel, explanationLabel, buttons);

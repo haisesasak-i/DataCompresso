@@ -311,8 +311,8 @@ public class AlgorithmSelectionScene {
         subtitleFade.play();
 
         // Cards staggered animation
-        animateCard(card1, 0.8);
-        animateCard(card2, 1.0);
+        animateCard(card1, 0.3);
+        animateCard(card2, 0.3);
 
         // Back button animation
         backBtn.setOpacity(0);

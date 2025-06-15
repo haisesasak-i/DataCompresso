@@ -212,8 +212,8 @@ public class HuffmanScene {
 
         ListView<String> fileList = new ListView<>();
         fileList.setPrefHeight(120);
-        fileList.setStyle("-fx-control-inner-background: rgba(255,255,255,0.1); -fx-text-fill: #ffffff; " +
-                "-fx-border-color: rgba(255,255,255,0.3); -fx-border-radius: 10; -fx-background-radius: 10;");
+        fileList.setStyle("-fx-control-inner-background: white; -fx-text-fill: #ffffff; " +
+                "-fx-border-color: black; -fx-border-radius: 10; -fx-background-radius: 10;");
 
         HBox fileButtons = new HBox(15);
         fileButtons.setAlignment(Pos.CENTER);
