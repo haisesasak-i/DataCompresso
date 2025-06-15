@@ -2,9 +2,16 @@ package com.example.datacompresso.Huffman;
 
 public class Main {
     public static void main(String[] args) {
-           Huffman huffman = new Huffman();
-      String message =      huffman.encodedMessage("the quick brown fox jumps over the lazy dog and the rain in spain falls mainly on the plain while the mountains are covered with snow and the birds are chirping in the trees and the wind blows gently through the leaves\n","1234567890");
-        System.out.println(message);
-        System.out.println(huffman.decoder(message,"1234567890"));
+        Huffman huffman = new Huffman();
+        String key = "secure123";
+        String original = "Congratulations!!! Congratulations!!!";
+
+        String encoded = huffman.encodedMessage(original, key);
+        System.out.println("Encoded Message: " + encoded);
+
+        String decoded = huffman.decoder(encoded, key);
+        System.out.println("Decoded Message: " + decoded);
+
+        System.out.println("Match: " + original.equals(decoded));
     }
 }

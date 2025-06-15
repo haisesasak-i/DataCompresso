@@ -1,6 +1,8 @@
 package com.example.datacompresso.Huffman;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
 import java.util.HashMap;
 import java.util.Random;
 
@@ -17,9 +19,9 @@ public class Huffman implements Serializable {
     private StateForAdaptiveEncoding state;
 
     public Huffman() {
-        // Try loading previous state
+
         if (!loadState()) {
-            // If no saved state, initialize new
+
             rle = new RLE();
             this.frequencyMap = new HashMap<>();
             this.minHeap = new MinHeap();
@@ -29,7 +31,7 @@ public class Huffman implements Serializable {
         }
     }
 
-    // Serialize current state to file
+
     public void saveState() {
         try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(SERIAL_FILE))) {
             oos.writeObject(this);
@@ -73,7 +75,7 @@ public class Huffman implements Serializable {
         // Clear previous state before encoding new message
         frequencyMap.clear();
         codeMap.clear();
-        minHeap.clear();  // You should implement clear() in MinHeap
+        minHeap.clear();
 
         String oldMessage = message;
         message = rle.adaptiveEncode(message);
@@ -94,6 +96,7 @@ public class Huffman implements Serializable {
             builder.append(codeMap.get(current));
         }
         String encodedMessage = builder.toString();
+
 
         // Save the current state to file after encoding
         saveState();
@@ -147,13 +150,16 @@ public class Huffman implements Serializable {
     }
     private String encodeAndDecodeWithKey(String key, String message) {
         StringBuilder result = new StringBuilder(message.length());
-        Random prng = new Random(key.hashCode());  // seed with key's hashcode
+        Random prng = new Random(key.hashCode());
+
 
         for (int i = 0; i < message.length(); i++) {
             char bit = message.charAt(i);
+            int originalBit = bit - '0';
             int keyBit = prng.nextBoolean() ? 1 : 0;
-            char xorBit = (char)((bit - '0') ^ keyBit + '0');  // xor and convert back to '0' or '1'
-            result.append(xorBit);
+
+            int xorResult = originalBit ^ keyBit;
+            result.append((char) (xorResult + '0'));
         }
 
         return result.toString();
@@ -163,25 +169,24 @@ public class Huffman implements Serializable {
     public String decoder(String message, String key) {
         String decryptedMessage = encodeAndDecodeWithKey(key, message);
         Node root = minHeap.peek();
+        Node currentNode = root;
         StringBuilder builder = new StringBuilder();
 
         for (char current : decryptedMessage.toCharArray()) {
-            if (root.getData() != null) {
-                builder.append(root.getData());
-                root = minHeap.peek();
-            }
-
             if (current == '0') {
-                root = root.getLeft();
+                currentNode = currentNode.getLeft();
             } else if (current == '1') {
-                root = root.getRight();
+                currentNode = currentNode.getRight();
+            }
+
+            // When we reach a leaf node
+            if (currentNode.getLeft() == null && currentNode.getRight() == null) {
+                builder.append(currentNode.getData());
+                currentNode = root; // Reset for next character
             }
         }
 
-        if (root.getData() != null) {
-            builder.append(root.getData());
-        }
-        if(state.isState())
+        if (state.isState())
             return rle.decode(builder.toString());
         else
             return builder.toString();
