@@ -228,7 +228,7 @@ public class HuffmanScene {
             fc.setTitle("Select Files to " + (isCompress ? "Compress" : "Decompress"));
 
             if (!isCompress) {
-                // Add filter for .huff files in decompression mode
+
                 fc.getExtensionFilters().addAll(
                         new FileChooser.ExtensionFilter("Huffman Compressed Files", "*.huff"),
                         new FileChooser.ExtensionFilter("All Files", "*.*")
