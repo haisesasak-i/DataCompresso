@@ -160,8 +160,8 @@ public class LZWScene {
         VBox fileArea = new VBox(15);
         fileArea.setAlignment(Pos.CENTER);
         Label fileLabel = new Label("📁 Select Files");
-        fileLabel.setFont(Font.font("Inter", FontWeight.SEMI_BOLD, 18));
-        fileLabel.setTextFill(Color.web("#ffffff"));
+            fileLabel.setFont(Font.font("Inter", FontWeight.SEMI_BOLD, 18));
+            fileLabel.setTextFill(Color.web("#ffffff"));
         ListView<String> fileList = new ListView<>();
         fileList.setPrefHeight(120);
         fileList.setStyle("-fx-control-inner-background: white; -fx-text-fill: #ffffff; " + "-fx-border-color: rgba(255,255,255,0.3); -fx-border-radius: 10; -fx-background-radius: 10;");
@@ -173,8 +173,8 @@ public class LZWScene {
         addFilesBtn.setOnAction(e -> {
             FileChooser fc = new FileChooser();
             fc.setTitle("Select Files to " + (isCompress ? "Compress" : "Decompress"));
-            if (!isCompress) {
-                fc.getExtensionFilters().addAll(new FileChooser.ExtensionFilter("LZW Compressed Files", "*.lzw"), new FileChooser.ExtensionFilter("All Files", "*.*"));
+                if (!isCompress) {
+                    fc.getExtensionFilters().addAll(new FileChooser.ExtensionFilter("DataCompresso Files", "*.dclz", "*.lzw"), new FileChooser.ExtensionFilter("All Files", "*.*"));
             } else {
                 fc.getExtensionFilters().addAll(new FileChooser.ExtensionFilter("Text Files", "*.txt", "*.log", "*.csv", "*.json", "*.xml"), new FileChooser.ExtensionFilter("All Files", "*.*"));
             }
@@ -285,10 +285,15 @@ public class LZWScene {
 
                     sharedCodeList = new MyList();
 
-                    File outputFile = new File(file.getParent(), file.getName() + ".lzw");
-                    try (InputStream input = Files.newInputStream(file.toPath());
-                         OutputStream output = new FileOutputStream(outputFile)) {
-                        lzwInstance.compress(input, output, originalSize, sharedCodeList);
+                    File outputFile = new File(file.getParent(), file.getName() + ".dclz");
+                    try {
+                        try (InputStream input = Files.newInputStream(file.toPath());
+                             OutputStream output = new FileOutputStream(outputFile)) {
+                            lzwInstance.compress(input, output, originalSize, sharedCodeList);
+                        }
+                    } catch (Exception ex) {
+                        Files.deleteIfExists(outputFile.toPath());
+                        throw ex;
                     }
                     totalCompressedSize += outputFile.length();
 
@@ -344,37 +349,44 @@ public class LZWScene {
                     });
 
                     File file = selectedFiles.get(i);
-                    if (!isValidLZWFile(file)) {
-                        Platform.runLater(() -> {
-                            showAlert(Alert.AlertType.ERROR, "Invalid File",
-                                    file.getName() + " is not a valid LZW compressed file (.lzw extension required).");
-                        });
+                        String name = file.getName().toLowerCase();
+                        if (!name.endsWith(".dclz") && !name.endsWith(".lzw")) {
+                            Platform.runLater(() -> {
+                                showAlert(Alert.AlertType.ERROR, "Invalid File",
+                                        file.getName() + " is not a valid DataCompresso compressed file (.dclz or legacy .lzw required).");
+                            });
                         continue;
                     }
 
                     try {
-                        byte[] compressedBytes = Files.readAllBytes(file.toPath());
-                        long compressedSize = compressedBytes.length;
-                        totalCompressedSize += compressedSize;
-
-                        // Use the LZW algorithm's decompress method
-                        byte[] decompressedBytes = lzwInstance.decompress(compressedBytes);
-
-                        if (decompressedBytes == null) {
-                            throw new Exception("Decompression returned null - invalid file format");
-                        }
-
-                        long decompressedSize = decompressedBytes.length;
-                        totalDecompressedSize += decompressedSize;
-                        successfulFiles++;
+                        long compressedSize = Files.size(file.toPath());
+                        long decompressedSize;
 
                         // Create output file name
-                        String originalName = file.getName().replace(".lzw", "");
+                            String originalName = file.getName().replace(".dclz", "").replace(".lzw", "");
                         if (originalName.equals(file.getName())) {
                             originalName = file.getName() + "_decompressed";
                         }
                         File outputFile = new File(file.getParent(), "decompressed_" + originalName);
-                        Files.write(outputFile.toPath(), decompressedBytes);
+                        File temporaryFile = new File(outputFile.getPath() + ".part");
+                            try (OutputStream output = new FileOutputStream(temporaryFile)) {
+                                if (isFastLZWFile(file)) {
+                                    try (InputStream input = Files.newInputStream(file.toPath())) {
+                                        decompressedSize = lzwInstance.decompress(input, output);
+                                    }
+                                } else {
+                                    byte[] decompressedBytes = lzwInstance.decompress(Files.readAllBytes(file.toPath()));
+                                    if (decompressedBytes == null) {
+                                        throw new IOException("Invalid legacy LZW file");
+                                    }
+                                    output.write(decompressedBytes);
+                                    decompressedSize = decompressedBytes.length;
+                                }
+                        }
+                        Files.move(temporaryFile.toPath(), outputFile.toPath(),
+                            java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                        totalDecompressedSize += decompressedSize;
+                        successfulFiles++;
 
                         final long currentCompressedSize = totalCompressedSize;
                         final long currentDecompressedSize = totalDecompressedSize;
@@ -383,6 +395,8 @@ public class LZWScene {
                                 currentCompressedSize, currentDecompressedSize, df));
 
                     } catch (Exception ex) {
+                        File partialFile = new File(file.getParent(), "decompressed_" + file.getName().replace(".lzw", "") + ".part");
+                        Files.deleteIfExists(partialFile.toPath());
                         Platform.runLater(() -> {
                             showAlert(Alert.AlertType.ERROR, "Decompression Error",
                                     "Failed to decompress " + file.getName() + "\n\nError: " + ex.getMessage());
@@ -550,7 +564,8 @@ public class LZWScene {
     }
 
     private static boolean isValidLZWFile(File file) {
-        if (!file.getName().toLowerCase().endsWith(".lzw")) {
+        String name = file.getName().toLowerCase();
+        if (!name.endsWith(".dclz") && !name.endsWith(".lzw")) {
             return false;
         }
         try {
@@ -564,6 +579,12 @@ public class LZWScene {
         }
     }
 
+        private static boolean isFastLZWFile(File file) throws IOException {
+            try (InputStream input = Files.newInputStream(file.toPath())) {
+                return input.read() == 'D' && input.read() == 'C' &&
+                        input.read() == 'L' && input.read() == 'Z';
+            }
+        }
     private static void showAlert(Alert.AlertType type, String title, String message) {
         Alert alert = new Alert(type);
         alert.setTitle(title);

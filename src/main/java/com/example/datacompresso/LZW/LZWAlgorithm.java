@@ -6,14 +6,18 @@ import java.util.zip.DataFormatException;
 import java.util.zip.Deflater;
 import java.util.zip.DeflaterOutputStream;
 import java.util.zip.Inflater;
+import java.util.zip.InflaterInputStream;
+import java.nio.ByteBuffer;
 
 public class LZWAlgorithm implements Serializable {
     private static final long serialVersionUID = 1L;
     private static final String SERIAL_FILE = "lzw_state.ser";
     private static final byte[] FAST_FORMAT_MAGIC = {'D', 'C', 'L', 'Z'};
+    private static final byte FAST_FORMAT_VERSION = 1;
+    private static final int FAST_HEADER_SIZE = 4 + 1 + Long.BYTES;
 
     private byte[] compressedData;
-    private int originalSize;
+    private long originalSize;
     private List<Integer> codes;
 
     public LZWAlgorithm() {
@@ -47,6 +51,9 @@ public class LZWAlgorithm implements Serializable {
 
         ByteArrayOutputStream output = new ByteArrayOutputStream(input.length / 2);
         output.write(FAST_FORMAT_MAGIC, 0, FAST_FORMAT_MAGIC.length);
+        output.write(FAST_FORMAT_VERSION);
+        byte[] sizeBytes = ByteBuffer.allocate(Long.BYTES).putLong(input.length).array();
+        output.write(sizeBytes, 0, sizeBytes.length);
         byte[] buffer = new byte[8192];
         while (!deflater.finished()) {
             int count = deflater.deflate(buffer);
@@ -72,18 +79,27 @@ public class LZWAlgorithm implements Serializable {
 
         this.compressedData = null;
         this.codes = new ArrayList<>();
-        this.originalSize = inputSize > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) inputSize;
+        this.originalSize = inputSize;
 
-        output.write(FAST_FORMAT_MAGIC);
+        writeFastHeader(output, inputSize);
         Deflater deflater = new Deflater(Deflater.BEST_COMPRESSION);
-        try (DeflaterOutputStream compressedOutput = new DeflaterOutputStream(output, deflater, 8192)) {
-            byte[] buffer = new byte[8192];
-            int count;
-            while ((count = input.read(buffer)) != -1) {
-                compressedOutput.write(buffer, 0, count);
+        try {
+            try (DeflaterOutputStream compressedOutput = new DeflaterOutputStream(output, deflater, 8192)) {
+                byte[] buffer = new byte[8192];
+                int count;
+                while ((count = input.read(buffer)) != -1) {
+                    compressedOutput.write(buffer, 0, count);
+                }
             }
+        } finally {
+            deflater.end();
         }
-        saveState();
+    }
+
+    private void writeFastHeader(OutputStream output, long inputSize) throws IOException {
+        output.write(FAST_FORMAT_MAGIC);
+        output.write(FAST_FORMAT_VERSION);
+        output.write(ByteBuffer.allocate(Long.BYTES).putLong(inputSize).array());
     }
 
     private byte[] encodeWithVariableBits(List<Integer> codes) {
@@ -151,6 +167,44 @@ public class LZWAlgorithm implements Serializable {
         }
     }
 
+    public long decompress(InputStream input, OutputStream output) throws IOException {
+        PushbackInputStream source = new PushbackInputStream(input, 1);
+        byte[] magic = source.readNBytes(FAST_FORMAT_MAGIC.length);
+        if (!Arrays.equals(magic, FAST_FORMAT_MAGIC)) {
+            throw new IOException("Unsupported LZW file format");
+        }
+
+        int version = source.read();
+        long expectedSize = -1;
+        if (version == FAST_FORMAT_VERSION) {
+            byte[] sizeBytes = source.readNBytes(Long.BYTES);
+            if (sizeBytes.length != Long.BYTES) {
+                throw new IOException("Truncated compressed header");
+            }
+            expectedSize = ByteBuffer.wrap(sizeBytes).getLong();
+            if (expectedSize < 0) {
+                throw new IOException("Invalid original file size");
+            }
+        } else if (version >= 0) {
+            source.unread(version);
+        } else {
+            throw new IOException("Truncated compressed header");
+        }
+
+        long written = 0;
+        InflaterInputStream compressedInput = new InflaterInputStream(source);
+        byte[] buffer = new byte[8192];
+        int count;
+        while ((count = compressedInput.read(buffer)) != -1) {
+            output.write(buffer, 0, count);
+            written += count;
+        }
+        if (expectedSize >= 0 && written != expectedSize) {
+            throw new IOException("Compressed data is truncated or corrupt");
+        }
+        return written;
+    }
+
     private boolean hasFastFormat(byte[] compressed) {
         return compressed.length >= FAST_FORMAT_MAGIC.length &&
                 compressed[0] == FAST_FORMAT_MAGIC[0] &&
@@ -160,16 +214,16 @@ public class LZWAlgorithm implements Serializable {
     }
 
     private byte[] decompressFast(byte[] compressed) {
+        int dataOffset = getFastDataOffset(compressed);
         Inflater inflater = new Inflater();
-        inflater.setInput(compressed, FAST_FORMAT_MAGIC.length,
-                compressed.length - FAST_FORMAT_MAGIC.length);
+        inflater.setInput(compressed, dataOffset, compressed.length - dataOffset);
         ByteArrayOutputStream output = new ByteArrayOutputStream();
         byte[] buffer = new byte[8192];
 
         try {
             while (!inflater.finished()) {
                 int count = inflater.inflate(buffer);
-                if (count == 0 && inflater.needsInput()) {
+                if (count == 0 && (inflater.needsInput() || inflater.needsDictionary())) {
                     throw new IllegalArgumentException("Invalid compressed data");
                 }
                 output.write(buffer, 0, count);
@@ -180,6 +234,16 @@ public class LZWAlgorithm implements Serializable {
         } finally {
             inflater.end();
         }
+    }
+
+    private int getFastDataOffset(byte[] compressed) {
+        if (compressed.length >= FAST_HEADER_SIZE && compressed[4] == FAST_FORMAT_VERSION) {
+            return FAST_HEADER_SIZE;
+        }
+        if (compressed.length > FAST_FORMAT_MAGIC.length) {
+            return FAST_FORMAT_MAGIC.length;
+        }
+        throw new IllegalArgumentException("Invalid compressed data");
     }
 
     private byte[] decompressCodes(List<Integer> codes) {
@@ -354,7 +418,7 @@ public class LZWAlgorithm implements Serializable {
         return compressedData;
     }
 
-    public int getOriginalSize() {
+    public long getOriginalSize() {
         return originalSize;
     }
 
