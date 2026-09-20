@@ -264,7 +264,23 @@ public class HuffmanScene {
                                         String.join("\n", invalidFiles));
                     }
                 } else {
-                    selectedFiles.addAll(files);
+                    List<File> validFiles = new ArrayList<>();
+                    List<String> invalidFiles = new ArrayList<>();
+
+                    for (File file : files) {
+                        if (isSupportedTextFile(file)) {
+                            validFiles.add(file);
+                        } else {
+                            invalidFiles.add(file.getName());
+                        }
+                    }
+
+                    selectedFiles.addAll(validFiles);
+                    if (!invalidFiles.isEmpty()) {
+                        showAlert(Alert.AlertType.WARNING, "Unsupported Files Skipped",
+                                "Huffman compression supports text files only. Use LZW for PDFs and other binary files:\n" +
+                                        String.join("\n", invalidFiles));
+                    }
                 }
                 updateFileList(fileList);
             }
@@ -718,5 +734,15 @@ public class HuffmanScene {
                 file.isFile() &&
                 file.getName().toLowerCase().endsWith(".huff") &&
                 file.length() > 0;
+    }
+
+    private static boolean isSupportedTextFile(File file) {
+        if (file == null || !file.isFile()) {
+            return false;
+        }
+
+        String name = file.getName().toLowerCase();
+        return name.endsWith(".txt") || name.endsWith(".log") || name.endsWith(".csv") ||
+                name.endsWith(".json") || name.endsWith(".xml");
     }
 }

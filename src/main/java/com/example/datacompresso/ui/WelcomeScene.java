@@ -21,8 +21,8 @@ public class WelcomeScene extends Application {
 
     @Override
     public void start(Stage primaryStage) {
-        primaryStage.setHeight(900);
-        primaryStage.setWidth(900);
+        primaryStage.setHeight(800);
+        primaryStage.setWidth(800);
 
         // Create animated background
         StackPane backgroundPane = createAnimatedBackground();

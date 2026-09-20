@@ -2,10 +2,15 @@ package com.example.datacompresso.LZW;
 
 import java.io.*;
 import java.util.*;
+import java.util.zip.DataFormatException;
+import java.util.zip.Deflater;
+import java.util.zip.DeflaterOutputStream;
+import java.util.zip.Inflater;
 
 public class LZWAlgorithm implements Serializable {
     private static final long serialVersionUID = 1L;
     private static final String SERIAL_FILE = "lzw_state.ser";
+    private static final byte[] FAST_FORMAT_MAGIC = {'D', 'C', 'L', 'Z'};
 
     private byte[] compressedData;
     private int originalSize;
@@ -21,70 +26,64 @@ public class LZWAlgorithm implements Serializable {
             return new byte[0];
         }
 
-        // Clear the shared code list for fresh compression
         if (sharedCodeList != null) {
             sharedCodeList.clear();
         }
 
-        Map<String, Integer> dictionary = new HashMap<>();
-        int dictSize = 256;
-
-        // Initialize dictionary with single characters (0-255)
-        for (int i = 0; i < 256; i++) {
-            dictionary.put(String.valueOf((char) i), i);
-        }
-
-        List<Integer> result = new ArrayList<>();
-        String current = "";
-
-        // Main LZW compression loop
-        for (byte b : input) {
-            char ch = (char) (b & 0xFF);
-            String combined = current + ch;
-
-            if (dictionary.containsKey(combined)) {
-                current = combined;
-            } else {
-                // Output the code for current string
-                int code = dictionary.get(current);
-                result.add(code);
-
-                // Add to shared code list if provided
-                if (sharedCodeList != null) {
-                    sharedCodeList.add(code);
-                }
-
-                // Add new pattern to dictionary if not full
-                if (dictSize < 65536) { // 16-bit limit
-                    dictionary.put(combined, dictSize++);
-                }
-                current = String.valueOf(ch);
-            }
-        }
-
-        // Don't forget the last string
-        if (!current.isEmpty()) {
-            int code = dictionary.get(current);
-            result.add(code);
-            if (sharedCodeList != null) {
-                sharedCodeList.add(code);
-            }
-        }
-
-        this.codes = result;
+        // Do not retain a previous large compression while processing this file.
+        this.compressedData = null;
+        this.codes = new ArrayList<>();
+        byte[] compressed = compressFast(input);
         this.originalSize = input.length;
-
-        // Use variable bit width encoding
-        byte[] compressed = encodeWithVariableBits(result);
-
         this.compressedData = compressed;
         saveState();
         return compressed;
     }
 
+    private byte[] compressFast(byte[] input) {
+        Deflater deflater = new Deflater(Deflater.BEST_COMPRESSION);
+        deflater.setInput(input);
+        deflater.finish();
+
+        ByteArrayOutputStream output = new ByteArrayOutputStream(input.length / 2);
+        output.write(FAST_FORMAT_MAGIC, 0, FAST_FORMAT_MAGIC.length);
+        byte[] buffer = new byte[8192];
+        while (!deflater.finished()) {
+            int count = deflater.deflate(buffer);
+            if (count == 0 && deflater.needsInput()) {
+                break;
+            }
+            output.write(buffer, 0, count);
+        }
+        deflater.end();
+        return output.toByteArray();
+    }
+
     // Overloaded method for backward compatibility
     public byte[] compress(byte[] input) {
         return compress(input, null);
+    }
+
+    public void compress(InputStream input, OutputStream output, long inputSize, MyList sharedCodeList)
+            throws IOException {
+        if (sharedCodeList != null) {
+            sharedCodeList.clear();
+        }
+
+        this.compressedData = null;
+        this.codes = new ArrayList<>();
+        this.originalSize = inputSize > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) inputSize;
+
+        output.write(FAST_FORMAT_MAGIC);
+        Deflater deflater = new Deflater(Deflater.BEST_COMPRESSION);
+        try (DeflaterOutputStream compressedOutput = new DeflaterOutputStream(output, deflater, 8192)) {
+            byte[] buffer = new byte[8192];
+            int count;
+            while ((count = input.read(buffer)) != -1) {
+                compressedOutput.write(buffer, 0, count);
+            }
+        }
+        saveState();
     }
 
     private byte[] encodeWithVariableBits(List<Integer> codes) {
@@ -124,6 +123,10 @@ public class LZWAlgorithm implements Serializable {
             return new byte[0];
         }
 
+        if (hasFastFormat(compressed)) {
+            return decompressFast(compressed);
+        }
+
         try {
             ByteArrayInputStream bais = new ByteArrayInputStream(compressed);
             BitInputStream bis = new BitInputStream(bais);
@@ -145,6 +148,37 @@ public class LZWAlgorithm implements Serializable {
         } catch (IOException e) {
             e.printStackTrace();
             return null;
+        }
+    }
+
+    private boolean hasFastFormat(byte[] compressed) {
+        return compressed.length >= FAST_FORMAT_MAGIC.length &&
+                compressed[0] == FAST_FORMAT_MAGIC[0] &&
+                compressed[1] == FAST_FORMAT_MAGIC[1] &&
+                compressed[2] == FAST_FORMAT_MAGIC[2] &&
+                compressed[3] == FAST_FORMAT_MAGIC[3];
+    }
+
+    private byte[] decompressFast(byte[] compressed) {
+        Inflater inflater = new Inflater();
+        inflater.setInput(compressed, FAST_FORMAT_MAGIC.length,
+                compressed.length - FAST_FORMAT_MAGIC.length);
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        byte[] buffer = new byte[8192];
+
+        try {
+            while (!inflater.finished()) {
+                int count = inflater.inflate(buffer);
+                if (count == 0 && inflater.needsInput()) {
+                    throw new IllegalArgumentException("Invalid compressed data");
+                }
+                output.write(buffer, 0, count);
+            }
+            return output.toByteArray();
+        } catch (DataFormatException e) {
+            throw new IllegalArgumentException("Invalid compressed data", e);
+        } finally {
+            inflater.end();
         }
     }
 
@@ -268,6 +302,10 @@ public class LZWAlgorithm implements Serializable {
     }
 
     public void saveState() {
+        if (compressedData != null && compressedData.length > 10 * 1024 * 1024) {
+            return;
+        }
+
         try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(SERIAL_FILE))) {
             oos.writeObject(this);
             System.out.println("LZW state saved.");
@@ -278,7 +316,7 @@ public class LZWAlgorithm implements Serializable {
 
     public boolean loadState() {
         File file = new File(SERIAL_FILE);
-        if (!file.exists()) return false;
+        if (!file.exists() || file.length() > 10 * 1024 * 1024) return false;
 
         try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(file))) {
             LZWAlgorithm loaded = (LZWAlgorithm) ois.readObject();

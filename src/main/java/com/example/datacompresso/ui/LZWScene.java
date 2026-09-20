@@ -280,20 +280,17 @@ public class LZWScene {
                     });
 
                     File file = selectedFiles.get(i);
-                    byte[] inputBytes = Files.readAllBytes(file.toPath());
-                    long originalSize = inputBytes.length;
+                    long originalSize = Files.size(file.toPath());
                     totalOriginalSize += originalSize;
 
-                    // Create a new MyList for each file compression
                     sharedCodeList = new MyList();
-                    byte[] compressedBytes = lzwInstance.compress(inputBytes, sharedCodeList);
-                    totalCompressedSize += compressedBytes.length;
 
-                    // Save compressed file
                     File outputFile = new File(file.getParent(), file.getName() + ".lzw");
-                    try (FileOutputStream fos = new FileOutputStream(outputFile)) {
-                        fos.write(compressedBytes);
+                    try (InputStream input = Files.newInputStream(file.toPath());
+                         OutputStream output = new FileOutputStream(outputFile)) {
+                        lzwInstance.compress(input, output, originalSize, sharedCodeList);
                     }
+                    totalCompressedSize += outputFile.length();
 
                     final long currentOriginalSize = totalOriginalSize;
                     final long currentCompressedSize = totalCompressedSize;
@@ -310,6 +307,12 @@ public class LZWScene {
                 return null;
             }
         };
+        compressionTask.setOnFailed(e -> {
+            Throwable error = compressionTask.getException();
+            progressLabel.setText("Compression failed.");
+            showAlert(Alert.AlertType.ERROR, "Compression Failed",
+                    error == null ? "The file could not be compressed." : error.getMessage());
+        });
         new Thread(compressionTask).start();
     }
 
